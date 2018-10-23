@@ -154,15 +154,31 @@ public class Calculate {
       
       total = total.add(nextValue);
     }
+
+    final BigDecimal maxValueAsBigDecimal = new BigDecimal(maximumValue);
+    final BigDecimal halfMaxValue = maxValueAsBigDecimal.divide(BigDecimal.valueOf(2));
     
     while (total.compareTo(expectedSumOfValues) < 0) {
       for (int i = 0; i < values.size(); i++) {
         BigDecimal x = values.get(i);
         
-        if (x.compareTo(new BigDecimal(maximumValue)) < 0) {
-          x = x.add(ONE);
-          total = total.add(ONE);
+        if (x.compareTo(maxValueAsBigDecimal) < 0) {
+          final BigDecimal difference = maxValueAsBigDecimal.subtract(x);
+          
+          if (difference.compareTo(halfMaxValue) >= 0) {
+            x = x.add(difference);
+            total = total.add(difference);
+          }
+          else {
+            x = x.add(ONE);
+            total = total.add(ONE);
+          }
+          
           values.set(i, x);
+          
+          if (total.compareTo(expectedSumOfValues) == 0) {
+            break;
+          }
         }
         
         if (total.compareTo(expectedSumOfValues) == 0) {
