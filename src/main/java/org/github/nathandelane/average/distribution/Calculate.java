@@ -14,6 +14,8 @@ public class Calculate {
   private static final Logger LOGGER = Logger.getLogger(Calculate.class);
   
   private static final BigDecimal TEN = BigDecimal.valueOf(10);
+  
+  private static final BigDecimal FIVE = BigDecimal.valueOf(5);
 
   private static final BigDecimal ONE = BigDecimal.valueOf(1);
 
@@ -165,7 +167,7 @@ public class Calculate {
         if (x.compareTo(maxValueAsBigDecimal) < 0) {
           final BigDecimal difference = maxValueAsBigDecimal.subtract(x);
           
-          if (difference.compareTo(halfMaxValue) >= 0) {
+          if (difference.compareTo(halfMaxValue) <= 0) {
             x = x.add(difference);
             total = total.add(difference);
           }
