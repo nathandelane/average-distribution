@@ -5,7 +5,7 @@ import java.util.List;
 
 public class AverageDistribution {
   
-  private final int mimnimumNumberOfValues;
+  private final int minimumNumberOfValues;
   
   private final BigInteger minimumValue;
   
@@ -13,8 +13,8 @@ public class AverageDistribution {
   
   private final List<BigInteger> values;
 
-  public AverageDistribution(int mimnimumNumberOfValues, BigInteger minimumValue, BigInteger maximumValue, List<BigInteger> values) {
-    this.mimnimumNumberOfValues = mimnimumNumberOfValues;
+  public AverageDistribution(int minimumNumberOfValues, BigInteger minimumValue, BigInteger maximumValue, List<BigInteger> values) {
+    this.minimumNumberOfValues = minimumNumberOfValues;
     this.minimumValue = minimumValue;
     this.maximumValue = maximumValue;
     this.values = values;
