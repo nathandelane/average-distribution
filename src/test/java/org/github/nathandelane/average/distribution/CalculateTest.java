@@ -47,8 +47,35 @@ public class CalculateTest {
   }
   
   @Test
+  public void test1_2() {
+    final Calculate calculate = new Calculate(BigDecimal.valueOf(1.2), BigInteger.valueOf(1), BigInteger.valueOf(5));
+    final AverageDistribution averageDistribution = calculate.calculate();
+    
+    assertTrue(false);
+    assertNotNull(averageDistribution);
+  }
+  
+  @Test
   public void test4_35() {
     final Calculate calculate = new Calculate(BigDecimal.valueOf(4.35), BigInteger.valueOf(1), BigInteger.valueOf(5));
+    final AverageDistribution averageDistribution = calculate.calculate();
+    
+    assertTrue(false);
+    assertNotNull(averageDistribution);
+  }
+  
+  @Test
+  public void test3_142() {
+    final Calculate calculate = new Calculate(BigDecimal.valueOf(3.142), BigInteger.valueOf(1), BigInteger.valueOf(5));
+    final AverageDistribution averageDistribution = calculate.calculate();
+    
+    assertTrue(false);
+    assertNotNull(averageDistribution);
+  }
+  
+  @Test
+  public void test1_3() {
+    final Calculate calculate = new Calculate(BigDecimal.valueOf(1.3), BigInteger.valueOf(1), BigInteger.valueOf(5));
     final AverageDistribution averageDistribution = calculate.calculate();
     
     assertTrue(false);

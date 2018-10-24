@@ -2,21 +2,26 @@ package org.github.nathandelane.average.distribution;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import org.apache.log4j.Logger;
 
 public class Calculate {
   
+  private static final NumberFormat NUMBER_FORMATTER = new DecimalFormat("#,###");
+  
   private static final Logger LOGGER = Logger.getLogger(Calculate.class);
   
   private static final BigDecimal TEN = BigDecimal.valueOf(10);
   
-  private static final BigDecimal FIVE = BigDecimal.valueOf(5);
-
   private static final BigDecimal ONE = BigDecimal.valueOf(1);
 
   private final BigDecimal average;
@@ -65,132 +70,274 @@ public class Calculate {
     }
     while (decimalPartOfValue.compareTo(BigDecimal.ZERO) > 0);
     
+    final Map<String, Algorithm> algorithms = new HashMap<String, Algorithm>();
+    final Map<String, List<BigDecimal>> algorithmResults = new HashMap<String, List<BigDecimal>>();
+    final Map<String, Long> algorithmTimes = new HashMap<String, Long>();
+    
+    algorithms.put("movingAverage", findByMovingAverage);
+    algorithms.put("maximalDistribution", distributeMaximally);
+    algorithms.put("randomDistribution", calculateRandom);
+    algorithms.put("subtractionDistribution", subtractionDistribution);
+    
     LOGGER.info(String.format("Average: %s, Minimum Value: %s, Maximum Value: %s", average, minimumValue, maximumValue));
     
-    final List<BigDecimal> maximalDistribution = distributeMaximally(multiplier);
+    for (Map.Entry<String, Algorithm> nextAlgorithm : algorithms.entrySet()) {
+      final String algorithmName = nextAlgorithm.getKey();
+      final Algorithm algorithm = nextAlgorithm.getValue();
+      final long startTime = System.nanoTime();
+      final List<BigDecimal> results = algorithm.calculate(multiplier);
+      final long endTime = System.nanoTime();
+      
+      algorithmResults.put(algorithmName, results);
+      algorithmTimes.put(algorithmName, (endTime - startTime));
+    }
     
-    LOGGER.info(String.format("maximalDistribution: %s, sum=%s, mean=%s, variance=%s, min=%s, max=%s", maximalDistribution, sumValues(maximalDistribution), mean(maximalDistribution), variance(maximalDistribution), min(maximalDistribution), max(maximalDistribution)));
-
-    final List<BigDecimal> randomDistribution = calculateRandom(multiplier);
+    for (Map.Entry<String, List<BigDecimal>> nextAlgorithm : algorithmResults.entrySet()) {
+      final String algorithmName = nextAlgorithm.getKey();
+      final List<BigDecimal> algorithmResult = nextAlgorithm.getValue();
+      final long algorithmTime = algorithmTimes.get(algorithmName);
+      
+      LOGGER.info(String.format("%s %s: sum=%s, mean=%s, variance=%s, min=%s, max=%s; %s", NUMBER_FORMATTER.format(algorithmTime), algorithmName, sumValues(algorithmResult), mean(algorithmResult), variance(algorithmResult), min(algorithmResult), max(algorithmResult), algorithmResult));
+    }
     
-    LOGGER.info(String.format("randomDistribution: %s, sum=%s, mean=%s, variance=%s, min=%s, max=%s", randomDistribution, sumValues(randomDistribution), mean(randomDistribution), variance(randomDistribution), min(randomDistribution), max(randomDistribution)));
+    LOGGER.info("------------------------------");
     
     return null;
   }
   
-  private List<BigDecimal> distributeMaximally(final BigDecimal multiplier) {
-    int numberOfValues = 0;
-    
-    List<BigDecimal> listOfValues;
-    
-    if (multiplier != null) {
-      numberOfValues = multiplier.toBigInteger().intValue();
-      listOfValues = new ArrayList<BigDecimal>(numberOfValues);
+  private final Algorithm subtractionDistribution = new Algorithm() {
+
+    public List<BigDecimal> calculate(final BigDecimal multiplier) {
+      final List<BigDecimal> listOfValues = new ArrayList<BigDecimal>(multiplier.intValue());
       
-      for (int i = 0; i < numberOfValues; i++) {
-        final BigDecimal nextValue = average.multiply(ONE);
-        
-        listOfValues.add(i, nextValue);
+      for (int i = 0; i < multiplier.intValue(); i++) {
+        listOfValues.add(new BigDecimal(maximumValue));
       }
       
-      BigDecimal decimalPartsAdded = BigDecimal.ZERO;
+      final BigDecimal sum = average.multiply(multiplier);
       
-      while (containsValuesWithDecimals(listOfValues)) {
-        for (int i = 0; i < numberOfValues; i++) {
-          final BigDecimal nextDecimal = listOfValues.get(i);
-          final BigDecimal integerPart = new BigDecimal(nextDecimal.toBigInteger());
-          final BigDecimal remainder = nextDecimal.subtract(integerPart);
-          
-          decimalPartsAdded = decimalPartsAdded.add(remainder);
-          
-          listOfValues.set(i, integerPart);
+      int currentIndex = 0;
+      
+      while (sumValues(listOfValues).compareTo(sum) > 0) {
+        final BigDecimal currentValue = listOfValues.get(currentIndex);
+        final BigDecimal newValue = currentValue.subtract(ONE);
+        
+        listOfValues.set(currentIndex, newValue);
+        
+        currentIndex++;
+        
+        if (currentIndex >= listOfValues.size()) {
+          currentIndex = 0;
         }
       }
       
-      final BigDecimal maxValueAsBigDecimal = new BigDecimal(maximumValue);
+      return new ArrayList<BigDecimal>(listOfValues);
+    }
+    
+  };
+
+  private final Algorithm distributeMaximally = new Algorithm() {
+
+    public List<BigDecimal> calculate(final BigDecimal multiplier) {
+      int numberOfValues = 0;
       
-      for (int i = 0; i < numberOfValues; i++) {
-        if (decimalPartsAdded.compareTo(BigDecimal.ZERO) > 0) {
-          final BigDecimal nextDecimal = listOfValues.get(i);
+      List<BigDecimal> listOfValues;
+      
+      if (multiplier != null) {
+        numberOfValues = multiplier.toBigInteger().intValue();
+        listOfValues = new ArrayList<BigDecimal>(numberOfValues);
+        
+        for (int i = 0; i < numberOfValues; i++) {
+          final BigDecimal nextValue = average.multiply(ONE);
           
-          if (nextDecimal.compareTo(maxValueAsBigDecimal) < 0) {
-            final BigDecimal nextDecimalWithOneAdded = nextDecimal.add(ONE);
+          listOfValues.add(i, nextValue);
+        }
+        
+        BigDecimal decimalPartsAdded = BigDecimal.ZERO;
+        
+        while (containsValuesWithDecimals(listOfValues)) {
+          for (int i = 0; i < numberOfValues; i++) {
+            final BigDecimal nextDecimal = listOfValues.get(i);
+            final BigDecimal integerPart = new BigDecimal(nextDecimal.toBigInteger());
+            final BigDecimal remainder = nextDecimal.subtract(integerPart);
             
-            decimalPartsAdded = decimalPartsAdded.subtract(ONE);
+            decimalPartsAdded = decimalPartsAdded.add(remainder);
             
-            listOfValues.set(i, nextDecimalWithOneAdded);
+            listOfValues.set(i, integerPart);
           }
         }
-        else {
-          break;
+        
+        final BigDecimal maxValueAsBigDecimal = new BigDecimal(maximumValue);
+        
+        int index = 0;
+        
+        while (average(listOfValues).compareTo(average) != 0) {
+//          if (average(listOfValues).compareTo(average) )
+          if (decimalPartsAdded.compareTo(BigDecimal.ZERO) > 0) {
+            final BigDecimal nextDecimal = listOfValues.get(index);
+            
+            if (nextDecimal.compareTo(maxValueAsBigDecimal) < 0) {
+              final BigDecimal nextDecimalWithOneAdded = nextDecimal.add(ONE);
+              
+              decimalPartsAdded = decimalPartsAdded.subtract(ONE);
+              
+              listOfValues.set(index, nextDecimalWithOneAdded);
+            }
+          }
+          
+          index++;
+          
+          if (index >= listOfValues.size()) {
+            index = 0;
+          }
         }
       }
+      else {
+        throw new IllegalStateException("No multiplier identified.");
+      }
+      
+      return new ArrayList<BigDecimal>(listOfValues);
     }
-    else {
-      throw new IllegalStateException("No multiplier identified.");
-    }
     
-    return new ArrayList<BigDecimal>(listOfValues);
-  }
+  };
   
-  
-  public List<BigDecimal> calculateRandom(final BigDecimal multiplier) {
-    final int numberOfValues = multiplier.intValue();
-    final BigDecimal expectedSumOfValues = multiplier.multiply(average);
-    final Random random = new Random(System.currentTimeMillis());
-    final List<BigDecimal> values = new ArrayList<BigDecimal>(numberOfValues);
-    
-    BigDecimal total = BigDecimal.ZERO;
-    
-    for (int i = 0; i < numberOfValues; i++) {
-      int n = 0;
+  private final Algorithm findByMovingAverage = new Algorithm() {
+
+    public List<BigDecimal> calculate(final BigDecimal multiplier) {
+      final List<BigDecimal> listOfValues = new ArrayList<BigDecimal>(multiplier.intValue());
+      
+      for (int i = 0; i < multiplier.intValue(); i++) {
+        listOfValues.add(new BigDecimal(minimumValue));
+      }
+      
+      BigDecimal movingAverage = average(listOfValues);;
+
+      int currentIndex = 0;
       
       do {
-        n = random.nextInt(maximumValue.intValue());
+        final BigDecimal lastValue = listOfValues.get(currentIndex);
+        
+        if (lastValue.compareTo(new BigDecimal(maximumValue)) < 0) {
+          final BigDecimal newValue = lastValue.add(ONE);
+          
+          listOfValues.set(currentIndex, newValue);
+        }
+        else {
+          listOfValues.add(new BigDecimal(minimumValue));
+        }
+        
+        try {
+          movingAverage = average(listOfValues);
+        }
+        catch (ArithmeticException e) {
+          continue;
+        }
+        
+        currentIndex++;
+        
+        if (currentIndex >= listOfValues.size()) {
+          currentIndex = 0;
+        }
       }
-      while (n <= 0);
+      while (movingAverage.compareTo(average) != 0);
       
-      final BigDecimal nextValue = new BigDecimal(n);
-      
-      values.add(nextValue);
-      
-      total = total.add(nextValue);
+      return new ArrayList<BigDecimal>(listOfValues);
     }
+    
+  };
+  
+  private final Algorithm calculateRandom = new Algorithm() {
 
-    final BigDecimal maxValueAsBigDecimal = new BigDecimal(maximumValue);
-    final BigDecimal halfMaxValue = maxValueAsBigDecimal.divide(BigDecimal.valueOf(2));
-    
-    while (total.compareTo(expectedSumOfValues) < 0) {
-      for (int i = 0; i < values.size(); i++) {
-        BigDecimal x = values.get(i);
+    public List<BigDecimal> calculate(final BigDecimal multiplier) {
+      final int numberOfValues = multiplier.intValue();
+      final BigDecimal expectedSumOfValues = multiplier.multiply(average);
+      final Random random = new Random(System.currentTimeMillis());
+      final List<BigDecimal> listOfValues = new ArrayList<BigDecimal>(numberOfValues);
+      
+      for (int i = 0; i < numberOfValues; i++) {
+        int n = 0;
         
-        if (x.compareTo(maxValueAsBigDecimal) < 0) {
-          final BigDecimal difference = maxValueAsBigDecimal.subtract(x);
-          
-          if (difference.compareTo(halfMaxValue) <= 0) {
-            x = x.add(difference);
-            total = total.add(difference);
-          }
-          else {
-            x = x.add(ONE);
-            total = total.add(ONE);
-          }
-          
-          values.set(i, x);
-          
-          if (total.compareTo(expectedSumOfValues) == 0) {
-            break;
-          }
+        do {
+          n = random.nextInt(maximumValue.intValue());
         }
+        while (n <= 0);
         
-        if (total.compareTo(expectedSumOfValues) == 0) {
-          break;
+        final BigDecimal nextValue = new BigDecimal(n);
+        
+        listOfValues.add(nextValue);
+      }
+
+      final BigDecimal maxValueAsBigDecimal = new BigDecimal(maximumValue);
+      final BigDecimal minValueAsBigDecimal = new BigDecimal(minimumValue);
+      final BigDecimal quarterMaxValue = maxValueAsBigDecimal.divide(BigDecimal.valueOf(4), 2, RoundingMode.FLOOR);
+      
+      BigDecimal total = sumValues(listOfValues);
+      
+      if (total.compareTo(expectedSumOfValues) < 0) {
+        while (total.compareTo(expectedSumOfValues) < 0) {
+          for (int i = 0; i < listOfValues.size(); i++) {
+            BigDecimal x = listOfValues.get(i);
+            
+            if (x.compareTo(maxValueAsBigDecimal) < 0) {
+              final BigDecimal difference = maxValueAsBigDecimal.subtract(x);
+              
+              if (difference.compareTo(quarterMaxValue) < 0) {
+                x = x.add(difference);
+                total = total.add(difference);
+              }
+              else {
+                x = x.add(ONE);
+                total = total.add(ONE);
+              }
+              
+              listOfValues.set(i, x);
+              
+              if (total.compareTo(expectedSumOfValues) == 0) {
+                break;
+              }
+            }
+            
+            if (total.compareTo(expectedSumOfValues) == 0) {
+              break;
+            }
+          }
         }
       }
+      else if (total.compareTo(expectedSumOfValues) > 0) {
+        while (total.compareTo(expectedSumOfValues) > 0) {
+          for (int i = 0; i < listOfValues.size(); i++) {
+            BigDecimal x = listOfValues.get(i);
+            
+            if (x.compareTo(minValueAsBigDecimal) > 0) {
+              final BigDecimal difference = x.subtract(minValueAsBigDecimal);
+              
+              if (difference.compareTo(quarterMaxValue) < 0) {
+                x = x.subtract(difference);
+                total = total.subtract(difference);
+              }
+              else {
+                x = x.subtract(ONE);
+                total = total.subtract(ONE);
+              }
+              
+              listOfValues.set(i, x);
+              
+              if (total.compareTo(expectedSumOfValues) == 0) {
+                break;
+              }
+            }
+            
+            if (total.compareTo(expectedSumOfValues) == 0) {
+              break;
+            }
+          }
+        }
+      }
+      
+      return new ArrayList<BigDecimal>(listOfValues);
     }
     
-    return new ArrayList<BigDecimal>(values);
-  }
+  };
   
   private BigDecimal sumValues(final Collection<BigDecimal> values) {
     BigDecimal sum = BigDecimal.ZERO;
@@ -258,6 +405,22 @@ public class Calculate {
     }
     
     return max;
+  }
+  
+  private BigDecimal average(final Collection<BigDecimal> values) {
+    BigDecimal sum = sumValues(values);
+    BigDecimal numberOfValues = BigDecimal.valueOf(values.size());
+    
+    BigDecimal average = BigDecimal.ZERO;
+    
+    try {
+      average = sum.divide(numberOfValues, 10, RoundingMode.FLOOR);
+    }
+    catch (ArithmeticException e) {
+      // No-op
+    }
+    
+    return average;
   }
 
   private boolean containsValuesWithDecimals(final List<BigDecimal> listOfValues) {
