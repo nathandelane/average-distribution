@@ -14,6 +14,41 @@ import java.util.Random;
 
 import org.apache.log4j.Logger;
 
+/**
+ * <a href="https://math.stackexchange.com/questions/2969383/is-there-a-better-algorithm-for-finding-the-minimum-potential-set-of-integers-th">
+ * Is There a Better Algorithm for Finding the Minimum Potential Set of Integers that Could Comprise a Given Mean?</a>
+ * <div>
+ * <p>I'm trying to find the inverse of the mean, or in other words find the set of positive integers between an inclusive range that equals the mean, when divided by the number of integers identified.</p>
+ * <p>Given a mean or average, such as {@code 4.3}, and a minimum value, such as 1, and a maximum value, such as {@code 5}, I could use the following set of assumptions to identify one possible set of integers that would result in the average:
+ * <ol>
+ *   <li>Multiply the average by powers of ten until the number is whole, for example: 
+ *   {@code 4.3×10=43}</li>
+ *   <li>Since I multiplied {@code 4.3} by {@code 10}, create a list of ten integers, with a value of {@code 5}</li>
+ *   <li>But since {@code 5×10=50}, subtract 1 from each of seven values to have the sum of {@code 43}</li>
+ * </ol>
+ * <p>The resulting set of values is: {@code 5,5,5,4,4,4,4,4,4,4}</p>
+ * <p>Checking I get: {@code (5+5+5+4+4+4+4+4+4+4)/10=4.3}</p>
+ * <p>This feels cumbersome and naive to me, and I feel like there could be a better way to do this than by guessing, but every search I've tried doesn't seem to provide what I'm looking for.</p>
+ * <p>Some other solutions I came up with for this are:
+ * <ul>
+ *   <li>{@code (5+5+5+5+4+4+4+4+4+3)/10=4.3}</li>
+ *   <li>{@code (5+5+5+5+5+4+4+4+3+3)/10=4.3}</li>
+ *   <li>{@code (5+5+5+5+5+5+4+4+3+2)/10=4.3}</li>
+ * </ul></p>
+ * <p><b>As an aside</b> I can guess other answers that are close to this number, or if rounded or truncated to one decimal place would approximate 4.3
+ * as well, such as:
+ * <ul>
+ * <li>{@code 30/7=4.28571428571428571428}<li>
+ * <li>{@code 26/6=4.33333333333333333333}</li>
+ * <li>{@code 17/4=4.25}</li>
+ * </ul></p>
+ * <p>The biggest problem I see with all of these is that they are guesses, or assumptions.</p>
+ * <p>I'm trying to identify a better algorithm, if one exists.</p>
+ * <p>I'm thinking this is some kind of a distribution.</p>
+ * </div>
+ * @author nathandelane
+ *
+ */
 public class Calculate {
   
   private static final NumberFormat NUMBER_FORMATTER = new DecimalFormat("#,###");
@@ -97,7 +132,7 @@ public class Calculate {
       final List<BigDecimal> algorithmResult = nextAlgorithm.getValue();
       final long algorithmTime = algorithmTimes.get(algorithmName);
       
-      LOGGER.info(String.format("%s %s: sum=%s, mean=%s, variance=%s, min=%s, max=%s; %s", NUMBER_FORMATTER.format(algorithmTime), algorithmName, sumValues(algorithmResult), mean(algorithmResult), variance(algorithmResult), min(algorithmResult), max(algorithmResult), algorithmResult));
+      LOGGER.info(String.format("%s %s: sum=%s, mean=%s, variance=%s, min=%s, max=%s, numElements=%s; %s", NUMBER_FORMATTER.format(algorithmTime), algorithmName, sumValues(algorithmResult), mean(algorithmResult), variance(algorithmResult), min(algorithmResult), max(algorithmResult), algorithmResult.size(), algorithmResult));
     }
     
     LOGGER.info("------------------------------");

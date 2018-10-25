@@ -10,6 +10,64 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 
+/**
+ * <a href="https://math.stackexchange.com/questions/2969383/is-there-a-better-algorithm-for-finding-the-minimum-potential-set-of-integers-th">
+ * Is There a Better Algorithm for Finding the Minimum Potential Set of Integers that Could Comprise a Given Mean?</a>
+ * <div>
+ * <p>The way you've phrased the question makes it more a question about computer programming than mathematics, so let's think about it from a programming perspective.</p>
+ * <p>As you've noticed, the question reduces to "express the mean as a ratio of whole numbers s/n, and then find n numbers that sum to s, subject to certain constraints".</p>
+ * <p>Let's sketch out a recursive algorithm that solves your problem. A recursive algorithm has the form:
+ *   <ul>
+ *     <li>Is there an obvious solution? Then solve the problem, and we're done.</li>
+ *     <li>Is the problem obviously unsolvable? Then fail, and we're done.</li>
+ *     <li>There is no obvious solution.</li>
+ *     <li>Reduce the problem to one or more smaller problems.</li>
+ *     <li>Solve each of the smaller problems.</li>
+ *     <li>If any is unsolvable, fail.</li>
+ *     <li>We solved all the smaller problems.</li>
+ *     <li>Combine the solutions of the smaller problems to solve the larger problem.</li>
+ *   </ul>
+ * </p>
+ * <p>A "backtracking" algorithm modifies this basic pattern slightly: we make many attempts to solve many smaller problems, and if one of them succeeds, we succeed; if all of them fail, then we fail.</p>
+ * <p>All right. What's the version of this problem that has an obvious solution? "Find zero numbers that sum to zero", well that's easy, all sequences of zero numbers sum to zero. Moreover, "find zero numbers that sum to non zero" is also easy because we know that is impossible. Let's also assume that all the numbers are positive.</p>
+ * <p>So let's write up our algorithm in pseudocode:
+ *   <code>
+// Find n numbers that sum to s where each is between min and max
+FindSums(min, max, s, n)
+  if s < 0 then fail
+  if n < 0 then fail
+  if s > 0 and n = 0 then fail
+  if s = 0 and n = 0 then the solution is the empty sequence
+  // All right, those were the easy ones.
+  // The solution is not obvious, so let's break it down into a smaller
+  // problem:
+  let c take on values starting from min and going to max
+    // c is a proposed first number in our sequence. The
+    // remainder of the sequence sums to s - c, and it is of length n - 1
+    // So let's find a solution to that problem:
+    let tail = FindSums(min, max, s - c, n - 1)
+    if that succeeded, then the solution is to append c to tail and we're done.
+    if it failed, try again with a different c if there is one
+  // If we get here then every attempt failed, so there is no solution.
+  fail
+      </code>
+ * </p>
+ * <p>Try that algorithm out with pencil and paper for some small examples and see if you can make any progress. It is not very efficient; can you think of ways to make this simple algorithm more efficient?</p>
+ * <p>You say in your question that you are concerned that your algorithm is little better than "make a guess", but lots of algorithms in mathematics and computer programming are of the form "make a guess and then refine it in a principled way". Often the trick to getting an algorithm that performs well is to be smart about making good initial guesses, and fast at rejecting bad ones. This algorithm is poor in both regards; can you improve it?</p>
+ * <p>
+@MISC {2969426,
+    TITLE = {Is There a Better Algorithm for Finding the Minimum Potential Set of Integers that Could Comprise a Given Mean?},
+    AUTHOR = {Eric Lippert (https://math.stackexchange.com/users/21264/eric-lippert)},
+    HOWPUBLISHED = {Mathematics Stack Exchange},
+    NOTE = {URL:https://math.stackexchange.com/q/2969426 (version: 2018-10-24)},
+    EPRINT = {https://math.stackexchange.com/q/2969426},
+    URL = {https://math.stackexchange.com/q/2969426}
+}
+ * </p>
+ * </div>
+ * @author nathanlane
+ *
+ */
 public class RecursiveCalculate {
   
   private static final NumberFormat NUMBER_FORMATTER = new DecimalFormat("#,###");
@@ -44,7 +102,7 @@ public class RecursiveCalculate {
     
     final long algorithmTime = (endTime - startTime);
     
-    LOGGER.info(String.format("%s recursive: sum=%s, mean=%s, variance=%s, min=%s, max=%s; %s", NUMBER_FORMATTER.format(algorithmTime), sumValues(algorithmResult), mean(algorithmResult), variance(algorithmResult), min(algorithmResult), max(algorithmResult), algorithmResult));
+    LOGGER.info(String.format("%s recursive: sum=%s, mean=%s, variance=%s, min=%s, max=%s, numElements=%s; %s", NUMBER_FORMATTER.format(algorithmTime), sumValues(algorithmResult), mean(algorithmResult), variance(algorithmResult), min(algorithmResult), max(algorithmResult), algorithmResult.size(), algorithmResult));
     
     return new ArrayList<BigDecimal>(algorithmResult);
   }
